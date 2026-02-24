@@ -384,6 +384,72 @@ body {
     backdrop-filter: blur(12px);
 }
 
+/* ===== Action Bar ===== */
+.action-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1.5rem;
+    background: var(--gh-bg-canvas);
+    border-bottom: 1px solid var(--gh-border-default);
+}
+
+.action-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.branch-stats-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--gh-fg-default);
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-sm);
+    transition: background var(--transition-fast);
+}
+
+.branch-stats-btn:hover {
+    background: var(--gh-bg-subtle);
+}
+
+.branch-stats-count {
+    font-weight: 600;
+}
+
+.branch-stats-label {
+    font-weight: 400;
+    color: var(--gh-fg-muted);
+}
+
+.repo-stats {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.repo-stat {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.8125rem;
+    color: var(--gh-fg-muted);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
+}
+
+.repo-stat:hover {
+    color: var(--gh-accent);
+    background: var(--gh-bg-subtle);
+}
+
 .header-left {
     display: flex;
     align-items: center;
@@ -508,7 +574,7 @@ body {
 .branch-dropdown-panel {
     position: absolute;
     top: calc(100% + 6px);
-    right: 0;
+    left: 0;
     width: 300px;
     max-height: 400px;
     background: var(--gh-bg-default);

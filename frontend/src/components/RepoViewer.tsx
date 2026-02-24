@@ -126,78 +126,85 @@ export default function RepoViewer({
                 </div>
 
                 <div className="header-right">
-                    {/* Repo Stats */}
-                    <div className="repo-stats" style={{ display: 'flex', gap: 12, marginRight: 16 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8125rem', color: 'var(--gh-fg-muted)' }}>
-                            <Eye size={16} />
-                            <span>{formatCount(repoMetadata?.watchers_count || 0)}</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8125rem', color: 'var(--gh-fg-muted)' }}>
-                            <Star size={16} />
-                            <span>{formatCount(repoMetadata?.stargazers_count || 0)}</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8125rem', color: 'var(--gh-fg-muted)' }}>
-                            <GitFork size={16} />
-                            <span>{formatCount(repoMetadata?.forks_count || 0)}</span>
-                        </div>
-                    </div>
-
-                    {/* Branch Selector */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <BranchSelector
-                            branches={branches}
-                            selectedBranch={selectedBranch}
-                            onBranchChange={onBranchChange}
-                            onViewAll={() => setIsBranchesModalOpen(true)}
-                        />
-                        <button
-                            onClick={() => setIsBranchesModalOpen(true)}
-                            className="btn btn-ghost btn-sm"
-                            style={{ gap: '0.375rem', color: 'var(--gh-fg-muted)', fontWeight: 600 }}
-                        >
-                            <GitBranch size={16} />
-                            <span>{branches.length} <span style={{ fontWeight: 400 }}>Branches</span></span>
-                        </button>
-                    </div>
-
                     {/* Disconnect Button */}
                     <button
                         onClick={onDisconnect}
                         className="btn btn-ghost btn-sm"
                         title="Disconnect and return to login"
-                        style={{ marginLeft: 8 }}
                     >
                         <LogOut size={16} />
+                        <span style={{ marginLeft: '0.5rem', fontSize: '0.8125rem' }}>Disconnect</span>
                     </button>
                 </div>
             </header>
 
-            {/* Error Banner */}
-            {error && (
-                <div className="error-banner">
-                    <svg className="error-banner-icon" viewBox="0 0 16 16" fill="currentColor">
-                        <path d="M2.343 13.657A8 8 0 1113.657 2.343 8 8 0 012.343 13.657zM6.03 4.97a.75.75 0 00-1.06 1.06L6.94 8 4.97 9.97a.75.75 0 101.06 1.06L8 9.06l1.97 1.97a.75.75 0 101.06-1.06L9.06 8l1.97-1.97a.75.75 0 10-1.06-1.06L8 6.94 6.03 4.97z" />
-                    </svg>
-                    <span className="error-banner-text">{error}</span>
+            {/* ===== Action Bar ===== */}
+            <div className="action-bar">
+                <div className="action-bar-left">
+                    <BranchSelector
+                        branches={branches}
+                        selectedBranch={selectedBranch}
+                        onBranchChange={onBranchChange}
+                        onViewAll={() => setIsBranchesModalOpen(true)}
+                    />
+
+                    <button
+                        onClick={() => setIsBranchesModalOpen(true)}
+                        className="branch-stats-btn"
+                        title="View all branches"
+                    >
+                        <GitBranch size={16} />
+                        <span className="branch-stats-count">{branches.length}</span>
+                        <span className="branch-stats-label">Branches</span>
+                    </button>
                 </div>
-            )}
+
+                <div className="repo-stats">
+                    <div className="repo-stat" title="Watchers">
+                        <Eye size={14} />
+                        <span>{formatCount(repoMetadata?.watchers_count || 0)}</span>
+                    </div>
+                    <div className="repo-stat" title="Stars">
+                        <Star size={14} />
+                        <span>{formatCount(repoMetadata?.stargazers_count || 0)}</span>
+                    </div>
+                    <div className="repo-stat" title="Forks">
+                        <GitFork size={14} />
+                        <span>{formatCount(repoMetadata?.forks_count || 0)}</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Error Banner */}
+            {
+                error && (
+                    <div className="error-banner">
+                        <svg className="error-banner-icon" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M2.343 13.657A8 8 0 1113.657 2.343 8 8 0 012.343 13.657zM6.03 4.97a.75.75 0 00-1.06 1.06L6.94 8 4.97 9.97a.75.75 0 101.06 1.06L8 9.06l1.97 1.97a.75.75 0 101.06-1.06L9.06 8l1.97-1.97a.75.75 0 10-1.06-1.06L8 6.94 6.03 4.97z" />
+                        </svg>
+                        <span className="error-banner-text">{error}</span>
+                    </div>
+                )
+            }
 
             {/* Loading overlay for branch switching */}
-            {loading && (
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    padding: '0.5rem 1.5rem',
-                    background: 'var(--gh-accent-subtle)',
-                    borderBottom: '1px solid var(--gh-border-default)',
-                    fontSize: '0.8125rem',
-                    color: 'var(--gh-accent)',
-                }}>
-                    <Loader2 size={14} className="animate-spin-custom" />
-                    Loading branch...
-                </div>
-            )}
+            {
+                loading && (
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        padding: '0.5rem 1.5rem',
+                        background: 'var(--gh-accent-subtle)',
+                        borderBottom: '1px solid var(--gh-border-default)',
+                        fontSize: '0.8125rem',
+                        color: 'var(--gh-accent)',
+                    }}>
+                        <Loader2 size={14} className="animate-spin-custom" />
+                        Loading branch...
+                    </div>
+                )
+            }
 
             {/* ===== Main Content ===== */}
             <div className="main-layout">
@@ -250,14 +257,16 @@ export default function RepoViewer({
             </div>
 
             {/* Branches Modal */}
-            {isBranchesModalOpen && (
-                <BranchesModal
-                    branches={branches}
-                    selectedBranch={selectedBranch}
-                    onClose={() => setIsBranchesModalOpen(false)}
-                    onSelect={onBranchChange}
-                />
-            )}
-        </div>
+            {
+                isBranchesModalOpen && (
+                    <BranchesModal
+                        branches={branches}
+                        selectedBranch={selectedBranch}
+                        onClose={() => setIsBranchesModalOpen(false)}
+                        onSelect={onBranchChange}
+                    />
+                )
+            }
+        </div >
     );
 }
