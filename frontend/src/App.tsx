@@ -1,30 +1,31 @@
 import { useState } from 'react';
-import RepoInputForm from './components/RepoInputForm';
-import BranchSelector from './components/BranchSelector';
-import FileExplorer from './components/FileExplorer';
-import CodeViewer from './components/CodeViewer';
+import LandingPage from './components/LandingPage.tsx';
+import RepoViewer from './components/RepoViewer.tsx';
 import {
   parseRepoUrl,
   getBranches,
   getRepoTree,
-  getFileContent,
+  getRepoMetadata,
   Branch,
   TreeItem,
+  RepoMetadata,
 } from './services/githubService';
-import { AlertCircle } from 'lucide-react';
+
+export interface RepoInfo {
+  owner: string;
+  repo: string;
+}
 
 function App() {
-  const [repoInfo, setRepoInfo] = useState<{ owner: string; repo: string } | null>(null);
+  const [repoInfo, setRepoInfo] = useState<RepoInfo | null>(null);
   const [token, setToken] = useState<string>('');
   const [branches, setBranches] = useState<Branch[]>([]);
+  const [repoMetadata, setRepoMetadata] = useState<RepoMetadata | null>(null);
   const [selectedBranch, setSelectedBranch] = useState<string>('');
   const [tree, setTree] = useState<TreeItem[]>([]);
-  const [selectedFile, setSelectedFile] = useState<string | null>(null);
-  const [fileContent, setFileContent] = useState<string>('');
-  const [fileName, setFileName] = useState<string>('');
   const [loading, setLoading] = useState(false);
-  const [fileLoading, setFileLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
 
   const handleRepoSubmit = async (repoUrl: string, githubToken: string) => {
     setError(null);
@@ -33,20 +34,31 @@ function App() {
     try {
       const parsed = parseRepoUrl(repoUrl);
       if (!parsed) {
-        throw new Error('Invalid GitHub repository URL');
+        throw new Error('Invalid GitHub repository URL. Use format: https://github.com/owner/repo');
       }
 
       setRepoInfo(parsed);
       setToken(githubToken);
 
-      const fetchedBranches = await getBranches(parsed.owner, parsed.repo, githubToken);
+      // Fetch branches and repo metadata concurrently
+      const [fetchedBranches, fetchedMetadata] = await Promise.all([
+        getBranches(parsed.owner, parsed.repo, githubToken),
+        getRepoMetadata(parsed.owner, parsed.repo, githubToken)
+      ]);
+
       setBranches(fetchedBranches);
+      setRepoMetadata(fetchedMetadata);
 
       if (fetchedBranches.length > 0) {
-        const defaultBranch = fetchedBranches.find((b) => b.name === 'main') || fetchedBranches[0];
+        const defaultBranch =
+          fetchedBranches.find((b) => b.name === 'main') ||
+          fetchedBranches.find((b) => b.name === 'master') ||
+          fetchedBranches[0];
         setSelectedBranch(defaultBranch.name);
         await loadTree(parsed.owner, parsed.repo, defaultBranch.name, githubToken);
       }
+
+      setIsConnected(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load repository');
       setBranches([]);
@@ -60,9 +72,6 @@ function App() {
     try {
       const treeData = await getRepoTree(owner, repo, branch, githubToken);
       setTree(treeData.tree);
-      setSelectedFile(null);
-      setFileContent('');
-      setFileName('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load repository tree');
       setTree([]);
@@ -84,81 +93,41 @@ function App() {
     }
   };
 
-  const handleFileSelect = async (path: string) => {
-    if (!repoInfo) return;
-    setSelectedFile(path);
-    setFileLoading(true);
+  const handleDisconnect = () => {
+    setIsConnected(false);
+    setRepoInfo(null);
+    setToken('');
+    setBranches([]);
+    setRepoMetadata(null);
+    setSelectedBranch('');
+    setTree([]);
     setError(null);
-
-    try {
-      const content = await getFileContent(repoInfo.owner, repoInfo.repo, path, selectedBranch, token);
-      setFileContent(content.content);
-      setFileName(content.name);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load file content');
-      setFileContent('');
-      setFileName('');
-    } finally {
-      setFileLoading(false);
-    }
   };
 
+  if (!isConnected) {
+    return (
+      <LandingPage
+        onSubmit={handleRepoSubmit}
+        loading={loading}
+        error={error}
+      />
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
-        <RepoInputForm onSubmit={handleRepoSubmit} loading={loading} />
-
-        {error && (
-          <div className="mt-6 max-w-2xl mx-auto p-4 bg-red-50 border border-red-200 rounded-md flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-            <div>
-              <h4 className="text-sm font-semibold text-red-800">Error</h4>
-              <p className="text-sm text-red-700 mt-1">{error}</p>
-            </div>
-          </div>
-        )}
-
-        {branches.length > 0 && (
-          <div className="mt-8 max-w-7xl mx-auto">
-            <div className="mb-4">
-              <BranchSelector
-                branches={branches}
-                selectedBranch={selectedBranch}
-                onBranchChange={handleBranchChange}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-1">
-                {tree.length > 0 && (
-                  <FileExplorer tree={tree} onFileSelect={handleFileSelect} selectedFile={selectedFile} />
-                )}
-              </div>
-
-              <div className="lg:col-span-2">
-                {selectedFile && (
-                  <CodeViewer fileName={fileName} content={fileContent} loading={fileLoading} />
-                )}
-                {!selectedFile && tree.length > 0 && (
-                  <div className="bg-white rounded-md shadow-sm border border-gray-200 p-12 flex items-center justify-center">
-                    <p className="text-gray-500 text-center">
-                      Select a file from the explorer to view its contents
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {loading && tree.length === 0 && (
-          <div className="mt-12 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading repository...</p>
-          </div>
-        )}
-      </div>
-    </div>
+    <RepoViewer
+      repoInfo={repoInfo!}
+      repoMetadata={repoMetadata!}
+      token={token}
+      branches={branches}
+      selectedBranch={selectedBranch}
+      tree={tree}
+      loading={loading}
+      error={error}
+      onBranchChange={handleBranchChange}
+      onDisconnect={handleDisconnect}
+      onError={setError}
+    />
   );
 }
 

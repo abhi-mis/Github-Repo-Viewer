@@ -48,7 +48,63 @@ app.get('/api/github/branches', requireToken, async (req, res) => {
             return res.status(400).json({ error: 'Missing required parameters: owner, repo' });
         }
 
-        const url = `https://api.github.com/repos/${owner}/${repo}/branches`;
+        console.log(`[BACKEND] Fetching all branches for ${owner}/${repo}...`);
+
+        let allBranches = [];
+        let page = 1;
+        let hasNextPage = true;
+
+        while (hasNextPage) {
+            const url = `https://api.github.com/repos/${owner}/${repo}/branches?per_page=100&page=${page}`;
+            console.log(`[BACKEND] Fetching page ${page}...`);
+
+            const response = await fetch(url, {
+                headers: {
+                    Authorization: `Bearer ${req.githubToken}`,
+                    Accept: 'application/vnd.github.v3+json',
+                    'User-Agent': 'GitHub-Repo-Viewer',
+                },
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw { status: response.status, message: `GitHub API error: ${response.status}`, details: errorText };
+            }
+
+            const branches = await response.json();
+            allBranches = allBranches.concat(branches);
+            console.log(`[BACKEND] Got ${branches.length} branches. Total so far: ${allBranches.length}`);
+
+            // Check GitHub Link header for "next" page
+            const linkHeader = response.headers.get('link');
+            if (linkHeader && linkHeader.includes('rel="next"')) {
+                page++;
+            } else {
+                hasNextPage = false;
+            }
+        }
+
+        console.log(`[BACKEND] Finished. Total branches sent: ${allBranches.length}`);
+        res.json(allBranches);
+    } catch (error) {
+        console.error('[BACKEND ERROR]', error);
+        res.status(error.status || 500).json({
+            error: error.message,
+            details: error.details || 'Unknown error',
+        });
+    }
+});
+
+// GET /api/github/repo?owner=xxx&repo=xxx
+app.get('/api/github/repo', requireToken, async (req, res) => {
+    try {
+        const { owner, repo } = req.query;
+
+        if (!owner || !repo) {
+            return res.status(400).json({ error: 'Missing required parameters: owner, repo' });
+        }
+
+        const url = `https://api.github.com/repos/${owner}/${repo}`;
         const data = await githubFetch(url, req.githubToken);
         res.json(data);
     } catch (error) {

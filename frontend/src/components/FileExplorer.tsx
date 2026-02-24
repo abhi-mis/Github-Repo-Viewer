@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Folder, FolderOpen, File, ChevronRight, ChevronDown } from 'lucide-react';
+import { ChevronRight, FolderClosed, File as FileIcon } from 'lucide-react';
 import { TreeItem } from '../services/githubService';
 
 interface FileNode {
@@ -49,29 +49,69 @@ function buildFileTree(items: TreeItem[]): FileNode[] {
   });
 
   const convertToArray = (obj: { [key: string]: FileNodeMap }): FileNode[] => {
-    return Object.values(obj).map((node) => ({
-      name: node.name,
-      path: node.path,
-      type: node.type,
-      children: node.children ? convertToArray(node.children) : undefined,
-    })).sort((a, b) => {
-      if (a.type === 'tree' && b.type === 'blob') return -1;
-      if (a.type === 'blob' && b.type === 'tree') return 1;
-      return a.name.localeCompare(b.name);
-    });
+    return Object.values(obj)
+      .map((node) => ({
+        name: node.name,
+        path: node.path,
+        type: node.type,
+        children: node.children ? convertToArray(node.children) : undefined,
+      }))
+      .sort((a, b) => {
+        if (a.type === 'tree' && b.type === 'blob') return -1;
+        if (a.type === 'blob' && b.type === 'tree') return 1;
+        return a.name.localeCompare(b.name);
+      });
   };
 
   return convertToArray(root);
 }
 
-interface TreeNodeProps {
+// Get file icon color based on extension
+function getFileIconColor(filename: string): string {
+  const ext = filename.split('.').pop()?.toLowerCase();
+  const colorMap: { [key: string]: string } = {
+    ts: '#3178c6',
+    tsx: '#3178c6',
+    js: '#f1e05a',
+    jsx: '#f1e05a',
+    py: '#3572A5',
+    java: '#b07219',
+    css: '#563d7c',
+    scss: '#c6538c',
+    html: '#e34c26',
+    json: '#8bc34a',
+    md: '#083fa1',
+    yml: '#cb171e',
+    yaml: '#cb171e',
+    go: '#00ADD8',
+    rs: '#dea584',
+    rb: '#CC342D',
+    php: '#4F5D95',
+    swift: '#F05138',
+    kt: '#A97BFF',
+    dart: '#00B4AB',
+    vue: '#41b883',
+    svg: '#ffb13b',
+    sh: '#89e051',
+    bash: '#89e051',
+    sql: '#e38c00',
+    xml: '#0060ac',
+    toml: '#9c4221',
+    lock: '#6e7681',
+    gitignore: '#6e7681',
+    env: '#6e7681',
+  };
+  return colorMap[ext || ''] || 'var(--gh-fg-muted)';
+}
+
+interface TreeNodeComponentProps {
   node: FileNode;
   level: number;
   onFileSelect: (path: string) => void;
   selectedFile: string | null;
 }
 
-function TreeNode({ node, level, onFileSelect, selectedFile }: TreeNodeProps) {
+function TreeNodeComponent({ node, level, onFileSelect, selectedFile }: TreeNodeComponentProps) {
   const [isExpanded, setIsExpanded] = useState(level === 0);
 
   const handleClick = () => {
@@ -86,38 +126,37 @@ function TreeNode({ node, level, onFileSelect, selectedFile }: TreeNodeProps) {
 
   return (
     <div>
-      <div
+      <button
         onClick={handleClick}
-        className={`flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-gray-100 transition-colors ${isSelected ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
-          }`}
-        style={{ paddingLeft: `${level * 16 + 12}px` }}
+        className={`tree-node ${isSelected ? 'selected' : ''}`}
+        style={{ paddingLeft: `${level * 16 + 8}px` }}
+        title={node.path}
       >
         {node.type === 'tree' ? (
-          <>
-            {isExpanded ? (
-              <ChevronDown className="w-4 h-4 flex-shrink-0" />
-            ) : (
-              <ChevronRight className="w-4 h-4 flex-shrink-0" />
-            )}
-            {isExpanded ? (
-              <FolderOpen className="w-4 h-4 flex-shrink-0 text-yellow-600" />
-            ) : (
-              <Folder className="w-4 h-4 flex-shrink-0 text-yellow-600" />
-            )}
-          </>
+          <span className={`tree-node-chevron ${isExpanded ? 'expanded' : ''}`}>
+            <ChevronRight size={14} />
+          </span>
         ) : (
-          <>
-            <div className="w-4" />
-            <File className="w-4 h-4 flex-shrink-0 text-gray-500" />
-          </>
+          <span style={{ width: '16px', flexShrink: 0 }} />
         )}
-        <span className="text-sm truncate">{node.name}</span>
-      </div>
+
+        {node.type === 'tree' ? (
+          <FolderClosed size={16} className="tree-node-icon folder" />
+        ) : (
+          <FileIcon
+            size={16}
+            className="tree-node-icon file"
+            style={{ color: getFileIconColor(node.name) }}
+          />
+        )}
+
+        <span className="tree-node-name">{node.name}</span>
+      </button>
 
       {node.type === 'tree' && isExpanded && node.children && (
-        <div>
+        <div className="tree-children">
           {node.children.map((child) => (
-            <TreeNode
+            <TreeNodeComponent
               key={child.path}
               node={child}
               level={level + 1}
@@ -134,14 +173,26 @@ function TreeNode({ node, level, onFileSelect, selectedFile }: TreeNodeProps) {
 export default function FileExplorer({ tree, onFileSelect, selectedFile }: FileExplorerProps) {
   const fileTree = useMemo(() => buildFileTree(tree), [tree]);
 
+  const fileCount = tree.filter((i) => i.type === 'blob').length;
+  const folderCount = tree.filter((i) => i.type === 'tree').length;
+
   return (
-    <div className="bg-white rounded-md shadow-sm border border-gray-200 overflow-hidden">
-      <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
-        <h3 className="text-sm font-semibold text-gray-700">Files</h3>
+    <div className="sidebar">
+      <div className="sidebar-header">
+        <span className="sidebar-title">
+          <FolderClosed size={14} />
+          Files
+        </span>
+        <span style={{
+          fontSize: '0.6875rem',
+          color: 'var(--gh-fg-subtle)',
+        }}>
+          {fileCount} files · {folderCount} folders
+        </span>
       </div>
-      <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 300px)' }}>
+      <div className="sidebar-tree">
         {fileTree.map((node) => (
-          <TreeNode
+          <TreeNodeComponent
             key={node.path}
             node={node}
             level={0}

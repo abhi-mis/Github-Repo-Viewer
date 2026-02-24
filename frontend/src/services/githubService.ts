@@ -35,6 +35,23 @@ export interface FileContent {
   type: string;
 }
 
+export interface RepoMetadata {
+  name: string;
+  full_name: string;
+  owner: {
+    login: string;
+    avatar_url: string;
+  };
+  description: string;
+  private: boolean;
+  stargazers_count: number;
+  watchers_count: number;
+  forks_count: number;
+  open_issues_count: number;
+  default_branch: string;
+  html_url: string;
+}
+
 export const parseRepoUrl = (url: string): { owner: string; repo: string } | null => {
   const githubUrlPattern = /github\.com\/([^\/]+)\/([^\/]+)/;
   const match = url.match(githubUrlPattern);
@@ -160,4 +177,25 @@ export const detectLanguage = (filename: string): string => {
   };
 
   return languageMap[extension || ''] || 'plaintext';
+};
+
+export const getRepoMetadata = async (
+  owner: string,
+  repo: string,
+  token: string
+): Promise<RepoMetadata> => {
+  const url = `${API_BASE}/repo?owner=${owner}&repo=${repo}`;
+
+  const response = await fetch(url, {
+    headers: {
+      'X-GitHub-Token': token,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to fetch repository metadata');
+  }
+
+  return response.json();
 };
