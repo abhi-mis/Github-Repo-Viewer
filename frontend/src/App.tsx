@@ -6,6 +6,7 @@ import {
   getBranches,
   getRepoTree,
   getRepoMetadata,
+  deleteBranch,
   Branch,
   TreeItem,
   RepoMetadata,
@@ -93,6 +94,19 @@ function App() {
     }
   };
 
+  const handleDeleteBranch = async (branchName: string) => {
+    if (!repoInfo) return;
+    try {
+      await deleteBranch(repoInfo.owner, repoInfo.repo, branchName, token);
+      // Refresh branch list
+      const updatedBranches = await getBranches(repoInfo.owner, repoInfo.repo, token);
+      setBranches(updatedBranches);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete branch');
+      throw err;
+    }
+  };
+
   const handleDisconnect = () => {
     setIsConnected(false);
     setRepoInfo(null);
@@ -125,6 +139,7 @@ function App() {
       loading={loading}
       error={error}
       onBranchChange={handleBranchChange}
+      onDeleteBranch={handleDeleteBranch}
       onDisconnect={handleDisconnect}
       onError={setError}
     />

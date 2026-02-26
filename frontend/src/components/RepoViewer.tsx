@@ -32,6 +32,7 @@ interface RepoViewerProps {
     loading: boolean;
     error: string | null;
     onBranchChange: (branch: string) => void;
+    onDeleteBranch: (branch: string) => Promise<void>;
     onDisconnect: () => void;
     onError: (error: string | null) => void;
 }
@@ -46,6 +47,7 @@ export default function RepoViewer({
     loading,
     error,
     onBranchChange,
+    onDeleteBranch,
     onDisconnect,
     onError,
 }: RepoViewerProps) {
@@ -264,6 +266,7 @@ export default function RepoViewer({
                         selectedBranch={selectedBranch}
                         onClose={() => setIsBranchesModalOpen(false)}
                         onSelect={onBranchChange}
+                        onDelete={onDeleteBranch}
                     />
                 )
             }

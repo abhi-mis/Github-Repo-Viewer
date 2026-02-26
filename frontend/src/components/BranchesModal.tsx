@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, Search, GitBranch, Check } from 'lucide-react';
+import { X, Search, GitBranch, Check, Trash2, Loader2 } from 'lucide-react';
 import { Branch } from '../services/githubService';
 
 interface BranchesModalProps {
@@ -7,10 +7,12 @@ interface BranchesModalProps {
     selectedBranch: string;
     onClose: () => void;
     onSelect: (branchName: string) => void;
+    onDelete: (branchName: string) => Promise<void>;
 }
 
-export default function BranchesModal({ branches, selectedBranch, onClose, onSelect }: BranchesModalProps) {
+export default function BranchesModal({ branches, selectedBranch, onClose, onSelect, onDelete }: BranchesModalProps) {
     const [searchQuery, setSearchQuery] = useState('');
+    const [deletingBranch, setDeletingBranch] = useState<string | null>(null);
     const searchRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -22,6 +24,17 @@ export default function BranchesModal({ branches, selectedBranch, onClose, onSel
     const filteredBranches = branches.filter((b) =>
         b.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+    const handleDelete = async (branchName: string) => {
+        setDeletingBranch(branchName);
+        try {
+            await onDelete(branchName);
+        } catch (err) {
+            console.error('Failed to delete branch:', err);
+        } finally {
+            setDeletingBranch(null);
+        }
+    };
 
     return (
         <div className="modal-overlay" onClick={onClose}>
@@ -66,21 +79,69 @@ export default function BranchesModal({ branches, selectedBranch, onClose, onSel
                             </div>
                         ) : (
                             filteredBranches.map((branch) => (
-                                <button
+                                <div
                                     key={branch.name}
-                                    className={`branch-item ${selectedBranch === branch.name ? 'active' : ''}`}
-                                    onClick={() => {
-                                        onSelect(branch.name);
-                                        onClose();
+                                    className={`branch-item-wrapper ${selectedBranch === branch.name ? 'active' : ''}`}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        width: '100%',
+                                        borderBottom: '1px solid var(--gh-border-default)',
+                                        background: selectedBranch === branch.name ? 'var(--gh-bg-secondary)' : 'transparent'
                                     }}
-                                    style={{ padding: '12px 24px', width: '100%' }}
                                 >
-                                    <span className="branch-item-check" style={{ width: 24 }}>
-                                        {selectedBranch === branch.name ? <Check size={18} /> : <div style={{ width: 18 }} />}
-                                    </span>
-                                    <GitBranch size={16} style={{ marginRight: 8, color: 'var(--gh-fg-muted)' }} />
-                                    <span className="branch-item-name" style={{ fontSize: '14px' }}>{branch.name}</span>
-                                </button>
+                                    <button
+                                        className="branch-item"
+                                        onClick={() => {
+                                            onSelect(branch.name);
+                                            onClose();
+                                        }}
+                                        style={{
+                                            padding: '12px 16px',
+                                            flex: 1,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            background: 'transparent',
+                                            border: 'none',
+                                            textAlign: 'left',
+                                            cursor: 'pointer'
+                                        }}
+                                        disabled={deletingBranch === branch.name}
+                                    >
+                                        <span className="branch-item-check" style={{ width: 24, display: 'flex', justifyContent: 'center' }}>
+                                            {selectedBranch === branch.name ? <Check size={18} color="var(--gh-accent)" /> : <div style={{ width: 18 }} />}
+                                        </span>
+                                        <GitBranch size={16} style={{ marginRight: 8, color: 'var(--gh-fg-muted)' }} />
+                                        <span className="branch-item-name" style={{
+                                            fontSize: '14px',
+                                            fontWeight: selectedBranch === branch.name ? 600 : 400,
+                                            color: selectedBranch === branch.name ? 'var(--gh-fg-default)' : 'var(--gh-fg-muted)'
+                                        }}>
+                                            {branch.name}
+                                        </span>
+                                    </button>
+
+                                    {/* Action Area */}
+                                    <div style={{ padding: '0 16px' }}>
+                                        {deletingBranch === branch.name ? (
+                                            <Loader2 size={16} className="animate-spin-custom" style={{ color: 'var(--gh-danger)' }} />
+                                        ) : (
+                                            selectedBranch !== branch.name && (
+                                                <button
+                                                    className="btn btn-ghost btn-sm delete-btn-hover"
+                                                    style={{ color: 'var(--gh-fg-subtle)', padding: 4 }}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDelete(branch.name);
+                                                    }}
+                                                    title="Delete branch"
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            )
+                                        )}
+                                    </div>
+                                </div>
                             ))
                         )}
                     </div>

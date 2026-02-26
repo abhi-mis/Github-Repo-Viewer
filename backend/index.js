@@ -155,7 +155,43 @@ app.get('/api/github/file', requireToken, async (req, res) => {
     }
 });
 
-// Health check
+// DELETE /api/github/branches?owner=xxx&repo=xxx&branch=xxx
+app.delete('/api/github/branches', requireToken, async (req, res) => {
+    try {
+        const { owner, repo, branch } = req.query;
+
+        if (!owner || !repo || !branch) {
+            return res.status(400).json({ error: 'Missing required parameters: owner, repo, branch' });
+        }
+
+        console.log(`[BACKEND] Deleting branch ${branch} from ${owner}/${repo}...`);
+
+        const url = `https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${encodeURIComponent(branch)}`;
+
+        const response = await fetch(url, {
+            method: 'DELETE',
+            headers: {
+                Authorization: `Bearer ${req.githubToken}`,
+                Accept: 'application/vnd.github.v3+json',
+                'User-Agent': 'GitHub-Repo-Viewer',
+            },
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw { status: response.status, message: `GitHub API error: ${response.status}`, details: errorText };
+        }
+
+        res.status(204).send();
+    } catch (error) {
+        console.error('[BACKEND ERROR]', error);
+        res.status(error.status || 500).json({
+            error: error.message,
+            details: error.details || 'Unknown error',
+        });
+    }
+});
+
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });

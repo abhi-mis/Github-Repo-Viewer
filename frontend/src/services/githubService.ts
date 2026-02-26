@@ -87,6 +87,27 @@ export const getBranches = async (
   return response.json();
 };
 
+export const deleteBranch = async (
+  owner: string,
+  repo: string,
+  branch: string,
+  token: string
+): Promise<void> => {
+  const url = `${API_BASE}/branches?owner=${owner}&repo=${repo}&branch=${branch}`;
+
+  const response = await fetch(url, {
+    method: 'DELETE',
+    headers: {
+      'X-GitHub-Token': token,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to delete branch');
+  }
+};
+
 export const getRepoTree = async (
   owner: string,
   repo: string,
